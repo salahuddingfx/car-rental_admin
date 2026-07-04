@@ -299,3 +299,20 @@ export const reviewLinksApi = {
   list: () => api.get<{ data: any[]; current_page: number; last_page: number }>('/admin/review-links'),
   generate: (bookingId: number) => api.post<{ token: string; url: string; expires_at: string }>('/admin/review-links', { booking_id: bookingId }),
 };
+
+// Providers
+export const providersApi = {
+  list: (params?: Record<string, string | number | boolean>) =>
+    api.get<{ data: any[]; last_page: number }>('/admin/providers', params),
+  get: (id: string) => api.get<any>(`/admin/providers/${id}`),
+  pending: (page = 1) =>
+    api.get<{ data: any[]; last_page: number }>(`/admin/providers/pending?page=${page}`),
+  verify: (id: string, data: { status: string; rejection_reason?: string }) =>
+    api.put(`/admin/providers/${id}/verify`, data),
+  toggleStatus: (id: string) =>
+    api.put(`/admin/providers/${id}/status`),
+  members: (id: string) =>
+    api.get<any[]>(`/admin/providers/${id}/members`),
+  verifyMember: (memberId: string, data: { license_verified: boolean }) =>
+    api.put(`/admin/providers/members/${memberId}/verify`, data),
+};
