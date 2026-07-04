@@ -9,6 +9,7 @@ const mainLinks = [
   { to: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { to: '/admin/payments', label: 'Payments', icon: CreditCard },
   { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/providers', label: 'Providers', icon: Shield },
   { to: '/admin/chats', label: 'Live Chat', icon: MessageCircle },
   { to: '/admin/review-links', label: 'Review Links', icon: ExternalLink },
   { to: '/admin/categories', label: 'Categories', icon: Tag },

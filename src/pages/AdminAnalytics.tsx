@@ -55,11 +55,43 @@ interface TrafficStats {
   };
 }
 
-type Tab = 'overview' | 'traffic' | 'endpoints' | 'errors';
+type Tab = 'overview' | 'traffic' | 'endpoints' | 'errors' | 'bookings' | 'users' | 'fleet';
+
+interface BookingTrends {
+  bookings_per_day: { date: string; bookings: number; revenue: number; completed: number; cancelled: number }[];
+  bookings_by_status: { status: string; count: number }[];
+  monthly_revenue: { month: string; revenue: number; bookings: number }[];
+  avg_booking_value: number;
+  avg_rental_duration: number;
+  top_cars: { id: number; name: string; brand: string; image: string; bookings: number; revenue: number; rating: number }[];
+  peak_hours: { hour: number; bookings: number }[];
+}
+
+interface UserGrowth {
+  registrations_per_day: { date: string; registrations: number }[];
+  total_users: number;
+  new_users_this_period: number;
+  active_users: number;
+  users_by_role: { role: string; count: number }[];
+  verified_vs_unverified: { status: string; count: number }[];
+}
+
+interface CarUtilization {
+  total_cars: number;
+  active_cars: number;
+  cars_with_bookings: number;
+  utilization_rate: number;
+  car_performance: { id: number; name: string; brand: string; image: string; bookings_count: number; total_revenue: number; rating: number }[];
+  category_performance: { category: string; total_cars: number; avg_price: number; avg_rating: number }[];
+  brand_performance: { brand: string; total_cars: number; avg_price: number; avg_rating: number }[];
+}
 
 export default function AdminAnalytics() {
   const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
   const [trafficStats, setTrafficStats] = useState<TrafficStats | null>(null);
+  const [bookingTrends, setBookingTrends] = useState<BookingTrends | null>(null);
+  const [userGrowth, setUserGrowth] = useState<UserGrowth | null>(null);
+  const [carUtilization, setCarUtilization] = useState<CarUtilization | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(30);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -68,12 +100,18 @@ export default function AdminAnalytics() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const [biz, traffic] = await Promise.allSettled([
+        const [biz, traffic, bookings, users, fleet] = await Promise.allSettled([
           api.get<BusinessStats>('/admin/stats'),
           api.get<TrafficStats>(`/admin/analytics/overview?days=${period}`),
+          api.get<BookingTrends>(`/admin/analytics/booking-trends?days=${period}`),
+          api.get<UserGrowth>(`/admin/analytics/user-growth?days=${period}`),
+          api.get<CarUtilization>(`/admin/analytics/car-utilization?days=${period}`),
         ]);
         if (biz.status === 'fulfilled') setBusinessStats(biz.value);
         if (traffic.status === 'fulfilled') setTrafficStats(traffic.value);
+        if (bookings.status === 'fulfilled') setBookingTrends(bookings.value);
+        if (users.status === 'fulfilled') setUserGrowth(users.value);
+        if (fleet.status === 'fulfilled') setCarUtilization(fleet.value);
       } catch {} finally {
         setLoading(false);
       }
@@ -97,6 +135,9 @@ export default function AdminAnalytics() {
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'bookings', label: 'Bookings', icon: Calendar },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'fleet', label: 'Fleet', icon: Car },
     { id: 'traffic', label: 'Traffic', icon: Activity },
     { id: 'endpoints', label: 'Endpoints', icon: Zap },
     { id: 'errors', label: 'Errors', icon: AlertTriangle },
@@ -566,6 +607,262 @@ export default function AdminAnalytics() {
               </div>
               <p className="text-sm font-bold text-neutral-800">No Errors Found</p>
               <p className="text-xs text-neutral-500 mt-1">Platform is running smoothly in the last {period} days</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ========== BOOKINGS TAB ========== */}
+      {activeTab === 'bookings' && bookingTrends && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Avg. Booking Value</p>
+              <span className="text-xl font-bold text-neutral-900 font-display">৳{bookingTrends.avg_booking_value.toLocaleString()}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Avg. Rental Duration</p>
+              <span className="text-xl font-bold text-neutral-900 font-display">{bookingTrends.avg_rental_duration} days</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Completed Bookings</p>
+              <span className="text-xl font-bold text-green-600 font-display">{bookingTrends.bookings_by_status.find(s => s.status === 'Completed')?.count || 0}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Cancelled Bookings</p>
+              <span className="text-xl font-bold text-red-600 font-display">{bookingTrends.bookings_by_status.find(s => s.status === 'Cancelled')?.count || 0}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {bookingTrends.bookings_per_day.length > 0 && (
+              <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+                <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Bookings Per Day</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={bookingTrends.bookings_per_day}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={v => new Date(v).toLocaleDateString('en', { month: 'short', day: 'numeric' })} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip labelFormatter={v => new Date(v).toLocaleDateString()} />
+                    <Area type="monotone" dataKey="bookings" stroke="#3b82f6" fill="#3b82f620" name="Bookings" />
+                    <Area type="monotone" dataKey="completed" stroke="#10b981" fill="#10b98120" name="Completed" />
+                    <Area type="monotone" dataKey="cancelled" stroke="#ef4444" fill="#ef444420" name="Cancelled" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {bookingTrends.peak_hours.length > 0 && (
+              <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+                <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Peak Booking Hours</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={bookingTrends.peak_hours}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={h => `${h}:00`} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip formatter={(v: any) => [v, 'Bookings']} labelFormatter={h => `${h}:00`} />
+                    <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {bookingTrends.top_cars.length > 0 && (
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Top Performing Cars</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-100">
+                      <th className="text-left text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Car</th>
+                      <th className="text-right text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Bookings</th>
+                      <th className="text-right text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Revenue</th>
+                      <th className="text-right text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookingTrends.top_cars.map((car) => (
+                      <tr key={car.id} className="border-b border-neutral-50 hover:bg-neutral-50">
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-3">
+                            <img src={car.image} alt={car.name} className="w-10 h-10 rounded-lg object-cover" />
+                            <div>
+                              <p className="text-xs font-bold text-neutral-800">{car.name}</p>
+                              <p className="text-[10px] text-neutral-400">{car.brand}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs font-bold text-neutral-800">{car.bookings}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs font-bold text-green-600">৳{car.revenue.toLocaleString()}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs font-bold text-amber-500">★ {car.rating}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ========== USERS TAB ========== */}
+      {activeTab === 'users' && userGrowth && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Total Users</p>
+              <span className="text-xl font-bold text-neutral-900 font-display">{userGrowth.total_users.toLocaleString()}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">New Users ({period}d)</p>
+              <span className="text-xl font-bold text-blue-600 font-display">{userGrowth.new_users_this_period.toLocaleString()}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Active Users</p>
+              <span className="text-xl font-bold text-green-600 font-display">{userGrowth.active_users.toLocaleString()}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Verified Users</p>
+              <span className="text-xl font-bold text-purple-600 font-display">{userGrowth.verified_vs_unverified.find(v => v.status === 'verified')?.count || 0}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {userGrowth.registrations_per_day.length > 0 && (
+              <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+                <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">User Registrations</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={userGrowth.registrations_per_day}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={v => new Date(v).toLocaleDateString('en', { month: 'short', day: 'numeric' })} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip labelFormatter={v => new Date(v).toLocaleDateString()} />
+                    <Area type="monotone" dataKey="registrations" stroke="#3b82f6" fill="#3b82f620" name="Registrations" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {userGrowth.users_by_role.length > 0 && (
+              <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+                <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Users by Role</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <RePieChart>
+                    <Pie data={userGrowth.users_by_role.map(r => ({ name: r.role, value: r.count }))} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={4} dataKey="value">
+                      {userGrowth.users_by_role.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </RePieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ========== FLEET TAB ========== */}
+      {activeTab === 'fleet' && carUtilization && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Total Cars</p>
+              <span className="text-xl font-bold text-neutral-900 font-display">{carUtilization.total_cars}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Active Cars</p>
+              <span className="text-xl font-bold text-green-600 font-display">{carUtilization.active_cars}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Cars with Bookings</p>
+              <span className="text-xl font-bold text-blue-600 font-display">{carUtilization.cars_with_bookings}</span>
+            </div>
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <p className="text-[10px] text-neutral-400 font-display uppercase tracking-widest mb-1">Utilization Rate</p>
+              <span className={`text-xl font-bold font-display ${carUtilization.utilization_rate > 50 ? 'text-green-600' : 'text-amber-500'}`}>{carUtilization.utilization_rate}%</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {carUtilization.category_performance.length > 0 && (
+              <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+                <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Category Performance</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={carUtilization.category_performance.map(c => ({ name: c.category, cars: c.total_cars, avg_price: Number(c.avg_price) }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="cars" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Cars" />
+                    <Bar dataKey="avg_price" fill="#10b981" radius={[4, 4, 0, 0]} name="Avg Price" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {carUtilization.brand_performance.length > 0 && (
+              <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+                <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Brand Performance</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={carUtilization.brand_performance.map(b => ({ name: b.brand, cars: b.total_cars, avg_price: Number(b.avg_price) }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="cars" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Cars" />
+                    <Bar dataKey="avg_price" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Avg Price" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {carUtilization.car_performance.length > 0 && (
+            <div className="bg-white border border-neutral-200/60 shadow-sm p-5 rounded-2xl">
+              <h3 className="font-display text-xs font-bold text-neutral-800 uppercase tracking-widest mb-4">Car Performance</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-100">
+                      <th className="text-left text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Car</th>
+                      <th className="text-right text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Bookings</th>
+                      <th className="text-right text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Revenue</th>
+                      <th className="text-right text-[10px] font-display font-bold text-neutral-400 uppercase tracking-widest px-4 py-2">Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carUtilization.car_performance.map((car) => (
+                      <tr key={car.id} className="border-b border-neutral-50 hover:bg-neutral-50">
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-3">
+                            <img src={car.image} alt={car.name} className="w-10 h-10 rounded-lg object-cover" />
+                            <div>
+                              <p className="text-xs font-bold text-neutral-800">{car.name}</p>
+                              <p className="text-[10px] text-neutral-400">{car.brand}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs font-bold text-neutral-800">{car.bookings_count}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs font-bold text-green-600">৳{Number(car.total_revenue).toLocaleString()}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs font-bold text-amber-500">★ {car.rating}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

@@ -24,6 +24,7 @@ import AdminBookings from './pages/AdminBookings';
 import AdminReviewLinks from './pages/AdminReviewLinks';
 import AdminCategories from './pages/AdminCategories';
 import { AdminPayments } from './pages/AdminPayments';
+import AdminProviders from './pages/AdminProviders';
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
           <Route path="payments" element={<AdminPayments />} />
           <Route path="review-links" element={<AdminReviewLinks />} />
           <Route path="categories" element={<AdminCategories />} />
+          <Route path="providers" element={<AdminProviders />} />
         </Route>
         <Route path="*" element={<AdminLogin />} />
       </Routes>
