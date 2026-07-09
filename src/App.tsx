@@ -25,6 +25,8 @@ import AdminReviewLinks from './pages/AdminReviewLinks';
 import AdminCategories from './pages/AdminCategories';
 import { AdminPayments } from './pages/AdminPayments';
 import AdminProviders from './pages/AdminProviders';
+import AdminCoupons from './pages/AdminCoupons';
+import AdminPricing from './pages/AdminPricing';
 
 function App() {
   return (
@@ -59,6 +61,8 @@ function App() {
           <Route path="review-links" element={<AdminReviewLinks />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="providers" element={<AdminProviders />} />
+          <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="pricing" element={<AdminPricing />} />
         </Route>
         <Route path="*" element={<AdminLogin />} />
       </Routes>

@@ -13,6 +13,8 @@ const mainLinks = [
   { to: '/admin/chats', label: 'Live Chat', icon: MessageCircle },
   { to: '/admin/review-links', label: 'Review Links', icon: ExternalLink },
   { to: '/admin/categories', label: 'Categories', icon: Tag },
+  { to: '/admin/coupons', label: 'Coupons', icon: Tag },
+  { to: '/admin/pricing', label: 'Dynamic Pricing', icon: DollarSign },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
 ];
